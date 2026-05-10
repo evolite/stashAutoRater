@@ -1,0 +1,78 @@
+name: Stash Auto Rater
+description: Sets performer, studio, group, and gallery ratings to the Bayesian average of their rated scenes and images.
+url: https://codeberg.org/surging9143/stashAutoRater
+version: 1.0.0
+exec:
+  - python3
+  - "{pluginDir}/stashAutoRater.py"
+interface: raw
+tasks:
+  - name: Rate All
+    description: Recalculates ratings for all enabled entity types.
+    defaultArgs:
+      mode: rateAll
+  - name: Rate All Performers
+    description: Recalculates ratings for all performers.
+    defaultArgs:
+      mode: rateAllPerformers
+  - name: Rate All Studios
+    description: Recalculates ratings for all studios.
+    defaultArgs:
+      mode: rateAllStudios
+  - name: Rate All Groups
+    description: Recalculates ratings for all groups.
+    defaultArgs:
+      mode: rateAllGroups
+  - name: Rate All Galleries
+    description: Recalculates ratings for all galleries.
+    defaultArgs:
+      mode: rateAllGalleries
+settings:
+  # Enable/disable auto-rating per entity type
+  rate_performers:
+    displayName: "Enable: Performers"
+    description: "Auto-rate performers on update and via Rate All."
+    type: BOOLEAN
+  rate_studios:
+    displayName: "Enable: Studios"
+    description: "Auto-rate studios on update and via Rate All."
+    type: BOOLEAN
+  rate_groups:
+    displayName: "Enable: Groups"
+    description: "Auto-rate groups on update and via Rate All."
+    type: BOOLEAN
+  rate_galleries:
+    displayName: "Enable: Galleries"
+    description: "Auto-rate galleries on update and via Rate All."
+    type: BOOLEAN
+  # Scoring boosts — additive, log-scale unless noted; set to 0 or blank to disable
+  o_boost:
+    displayName: "Boost: O-Count"
+    description: "Log-scale bonus per o-count. Suggested: 2."
+    type: STRING
+  play_boost:
+    displayName: "Boost: Play-Count"
+    description: "Log-scale bonus per total scene plays. Suggested: 1."
+    type: STRING
+  watch_boost:
+    displayName: "Boost: Watch Time"
+    description: "Log-scale bonus per total hours of watch time across scenes. Suggested: 1."
+    type: STRING
+  favorite_boost:
+    displayName: "Boost: Favorite"
+    description: "Flat point bonus for entities marked as favorites. Suggested: 5."
+    type: STRING
+  tag_boost:
+    displayName: "Boost: Favorited Tags"
+    description: "Log-scale bonus per favorited tag on scenes/images. Suggested: 2."
+    type: STRING
+hooks:
+  - name: Auto-rate entities on update
+    description: Recalculates ratings when a scene, image, or entity is updated.
+    triggeredBy:
+      - Scene.Update.Post
+      - Image.Update.Post
+      - Performer.Update.Post
+      - Studio.Update.Post
+      - Group.Update.Post
+      - Gallery.Update.Post
