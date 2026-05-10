@@ -48,7 +48,7 @@ settings:
   # --- Boosts (set to 0 or leave blank to disable) ---
   o_boost:
     displayName: "O-Count Boost"
-    description: "Log-scale bonus per o-count. Applies to performers and studios. Suggested: 2."
+    description: "Log-scale bonus per o-count. Applies to performers, studios, and groups. For galleries, sums o-count across linked scenes. Suggested: 2."
     type: STRING
   play_boost:
     displayName: "Play-Count Boost"

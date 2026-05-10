@@ -37,7 +37,7 @@ query FindImage($id: ID!) {
   findImage(id: $id) {
     performers { id name rating100 o_counter favorite }
     studio     { id name rating100 o_counter favorite }
-    galleries  { id title rating100 o_counter }
+    galleries  { id title rating100 scenes { o_counter } }
   }
 }
 """
@@ -64,7 +64,7 @@ query FindGroup($id: ID!) {
 
 FIND_GALLERY = """
 query FindGallery($id: ID!) {
-  findGallery(id: $id) { id title rating100 o_counter }
+  findGallery(id: $id) { id title rating100 scenes { o_counter } }
 }
 """
 
@@ -90,7 +90,7 @@ query { findGroups(filter: {per_page: -1}) {
 
 FIND_ALL_GALLERIES = """
 query { findGalleries(filter: {per_page: -1}) {
-  galleries { id title rating100 o_counter }
+  galleries { id title rating100 scenes { o_counter } }
 } }
 """
 
@@ -390,13 +390,12 @@ def get_gallery_data(gallery_id):
 
 def rate_gallery(gallery, global_mean):
     rated, tag_hits = get_gallery_data(gallery["id"])
-    final = compute_rating(rated, 0, 0, tag_hits,
-                           gallery.get("o_counter") or 0,
-                           False, global_mean)
+    o_count = sum(s.get("o_counter") or 0 for s in gallery.get("scenes", []))
+    final = compute_rating(rated, 0, 0, tag_hits, o_count, False, global_mean)
     if final is None or final == gallery.get("rating100"):
         return
     graphql(GALLERY_UPDATE, {"input": {"id": gallery["id"], "rating100": final}})
-    log.info(f"Gallery {gallery.get('title') or gallery['id']} → {final}/100 (n={len(rated)}, tags={tag_hits:.2f})")
+    log.info(f"Gallery {gallery.get('title') or gallery['id']} → {final}/100 (n={len(rated)}, o={o_count}, tags={tag_hits:.2f})")
 
 
 def rate_all_galleries(global_mean):
