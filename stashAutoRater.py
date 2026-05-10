@@ -18,6 +18,8 @@ RATE_STUDIOS    = True
 RATE_GROUPS     = True
 RATE_GALLERIES  = True
 
+MAX_GROUP_DEPTH = 4  # levels of sub_groups to include when rating a group
+
 # --- Hook context ---
 
 FIND_SCENE_CONTEXT = """
@@ -140,6 +142,24 @@ FIND_IMAGES_WITH_TAGS = """
 query FindImages($image_filter: ImageFilterType!) {
   findImages(filter: {per_page: -1}, image_filter: $image_filter) {
     images { id rating100 tags { id favorite } }
+  }
+}
+"""
+
+# --- Group hierarchy ---
+
+FIND_GROUP_SUBGROUPS = """
+query FindGroup($id: ID!) {
+  findGroup(id: $id) {
+    sub_groups { group { id } }
+  }
+}
+"""
+
+FIND_GROUP_PARENTS = """
+query FindGroup($id: ID!) {
+  findGroup(id: $id) {
+    containing_groups { group { id name rating100 o_counter favorite } }
   }
 }
 """
@@ -297,8 +317,42 @@ def rate_all_studios(global_mean):
 
 # --- Groups ---
 
-def get_group_data(group_id):
+def collect_group_scenes_recursive(group_id, remaining, seen=None):
+    if seen is None:
+        seen = set()
+    if group_id in seen:
+        return []
+    seen.add(group_id)
     scenes = collect_scenes({"groups": {"value": [group_id], "modifier": "INCLUDES_ALL"}})
+    if remaining > 0:
+        result = graphql(FIND_GROUP_SUBGROUPS, {"id": group_id})
+        for assoc in (result.get("findGroup") or {}).get("sub_groups", []):
+            sg = assoc.get("group") if isinstance(assoc, dict) and "group" in assoc else assoc
+            if sg and sg.get("id"):
+                scenes += collect_group_scenes_recursive(sg["id"], remaining - 1, seen)
+    return scenes
+
+
+def rate_group_ancestors(group_id, global_mean, depth=0, seen=None):
+    if seen is None:
+        seen = set()
+    if group_id in seen or depth >= MAX_GROUP_DEPTH:
+        return
+    seen.add(group_id)
+    result = graphql(FIND_GROUP_PARENTS, {"id": group_id})
+    for assoc in (result.get("findGroup") or {}).get("containing_groups", []):
+        parent = assoc.get("group") if isinstance(assoc, dict) and "group" in assoc else assoc
+        if not parent or parent.get("id") in seen:
+            continue
+        try:
+            rate_group(parent, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating group {parent.get('name', parent['id'])}: {e}")
+        rate_group_ancestors(parent["id"], global_mean, depth + 1, seen)
+
+
+def get_group_data(group_id):
+    scenes = collect_group_scenes_recursive(group_id, MAX_GROUP_DEPTH)
     s_ratings, play_sum, watch_sum = scene_stats(scenes)
     tag_hits = tag_hits_from(scenes)
     return s_ratings, play_sum, watch_sum, tag_hits
@@ -379,6 +433,7 @@ def rate_entities_from_scene(scene_id, global_mean):
                 rate_group(g, global_mean)
             except Exception as e:
                 log.error(f"ERROR rating group {g.get('name', g['id'])}: {e}")
+            rate_group_ancestors(g["id"], global_mean)
 
 
 def rate_entities_from_image(image_id, global_mean):
@@ -517,6 +572,7 @@ def main():
                 rate_group(result, global_mean)
             except Exception as e:
                 log.error(f"ERROR rating group {result.get('name', entity_id)}: {e}")
+            rate_group_ancestors(entity_id, global_mean)
 
     elif hook_type.startswith("Gallery"):
         if not RATE_GALLERIES:
