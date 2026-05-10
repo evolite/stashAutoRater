@@ -1,7 +1,7 @@
 name: Stash Auto Rater
 description: Sets performer, studio, group, and gallery ratings to the Bayesian average of their rated scenes and images.
 url: https://codeberg.org/surging9143/stashAutoRater
-version: 1.0.2
+version: 1.0.3
 exec:
   - python3
   - "{pluginDir}/stashAutoRater.py"
