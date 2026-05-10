@@ -37,7 +37,7 @@ query FindImage($id: ID!) {
   findImage(id: $id) {
     performers { id name rating100 o_counter favorite }
     studio     { id name rating100 o_counter favorite }
-    galleries  { id name rating100 o_counter favorite }
+    galleries  { id title rating100 o_counter }
   }
 }
 """
@@ -64,7 +64,7 @@ query FindGroup($id: ID!) {
 
 FIND_GALLERY = """
 query FindGallery($id: ID!) {
-  findGallery(id: $id) { id name rating100 o_counter favorite }
+  findGallery(id: $id) { id title rating100 o_counter }
 }
 """
 
@@ -90,7 +90,7 @@ query { findGroups(filter: {per_page: -1}) {
 
 FIND_ALL_GALLERIES = """
 query { findGalleries(filter: {per_page: -1}) {
-  galleries { id name rating100 o_counter favorite }
+  galleries { id title rating100 o_counter }
 } }
 """
 
@@ -392,11 +392,11 @@ def rate_gallery(gallery, global_mean):
     rated, tag_hits = get_gallery_data(gallery["id"])
     final = compute_rating(rated, 0, 0, tag_hits,
                            gallery.get("o_counter") or 0,
-                           gallery.get("favorite", False), global_mean)
+                           False, global_mean)
     if final is None or final == gallery.get("rating100"):
         return
     graphql(GALLERY_UPDATE, {"input": {"id": gallery["id"], "rating100": final}})
-    log.info(f"Gallery {gallery['name']} → {final}/100 (n={len(rated)}, tags={tag_hits:.2f})")
+    log.info(f"Gallery {gallery.get('title') or gallery['id']} → {final}/100 (n={len(rated)}, tags={tag_hits:.2f})")
 
 
 def rate_all_galleries(global_mean):
@@ -454,7 +454,7 @@ def rate_entities_from_image(image_id, global_mean):
             try:
                 rate_gallery(gal, global_mean)
             except Exception as e:
-                log.error(f"ERROR rating gallery {gal.get('name', gal['id'])}: {e}")
+                log.error(f"ERROR rating gallery {gal.get('title') or gal['id']}: {e}")
 
 
 def parse_boost(raw, name, current):
@@ -582,7 +582,7 @@ def main():
             try:
                 rate_gallery(result, global_mean)
             except Exception as e:
-                log.error(f"ERROR rating gallery {result.get('name', entity_id)}: {e}")
+                log.error(f"ERROR rating gallery {result.get('title') or entity_id}: {e}")
 
     else:
         # Scene or Image update — cascade to all associated entities
