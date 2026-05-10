@@ -28,43 +28,43 @@ tasks:
     defaultArgs:
       mode: rateAllGalleries
 settings:
-  # Enable/disable auto-rating per entity type
+  # --- What to rate ---
   rate_performers:
-    displayName: "Enable: Performers"
-    description: "Auto-rate performers on update and via Rate All."
+    displayName: "Rate Performers"
+    description: "Automatically rate performers when their scenes, images, or profile are updated."
     type: BOOLEAN
   rate_studios:
-    displayName: "Enable: Studios"
-    description: "Auto-rate studios on update and via Rate All."
+    displayName: "Rate Studios"
+    description: "Automatically rate studios when their scenes, images, or profile are updated."
     type: BOOLEAN
   rate_groups:
-    displayName: "Enable: Groups"
-    description: "Auto-rate groups on update and via Rate All."
+    displayName: "Rate Groups"
+    description: "Automatically rate groups when their scenes or profile are updated."
     type: BOOLEAN
   rate_galleries:
-    displayName: "Enable: Galleries"
-    description: "Auto-rate galleries on update and via Rate All."
+    displayName: "Rate Galleries"
+    description: "Automatically rate galleries when their images or profile are updated."
     type: BOOLEAN
-  # Scoring boosts — additive, log-scale unless noted; set to 0 or blank to disable
+  # --- Boosts (set to 0 or leave blank to disable) ---
   o_boost:
-    displayName: "Boost: O-Count"
-    description: "Log-scale bonus per o-count. Suggested: 2."
+    displayName: "O-Count Boost"
+    description: "Log-scale bonus per o-count. Applies to performers and studios. Suggested: 2."
     type: STRING
   play_boost:
-    displayName: "Boost: Play-Count"
-    description: "Log-scale bonus per total scene plays. Suggested: 1."
+    displayName: "Play-Count Boost"
+    description: "Log-scale bonus per total scene plays. Applies to performers, studios, and groups. Suggested: 1."
     type: STRING
   watch_boost:
-    displayName: "Boost: Watch Time"
-    description: "Log-scale bonus per total hours of watch time across scenes. Suggested: 1."
+    displayName: "Watch Time Boost"
+    description: "Log-scale bonus per total hours watched across scenes. Applies to performers, studios, and groups. Suggested: 1."
     type: STRING
   favorite_boost:
-    displayName: "Boost: Favorite"
-    description: "Flat point bonus for entities marked as favorites. Suggested: 5."
+    displayName: "Favourite Boost"
+    description: "Flat point bonus for entities marked as favourites. Suggested: 5."
     type: STRING
   tag_boost:
-    displayName: "Boost: Favorited Tags"
-    description: "Log-scale bonus per favorited tag on scenes/images. Suggested: 2."
+    displayName: "Tag Boost"
+    description: "Log-scale bonus per favourited tag matched across scenes and images. Suggested: 2."
     type: STRING
 hooks:
   - name: Auto-rate entities on update
