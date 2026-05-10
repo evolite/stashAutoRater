@@ -27,7 +27,7 @@ query FindScene($id: ID!) {
   findScene(id: $id) {
     performers { id name rating100 o_counter favorite }
     studio     { id name rating100 o_counter favorite }
-    groups     { group { id name rating100 o_counter favorite } }
+    groups     { group { id name rating100 o_counter } }
   }
 }
 """
@@ -58,7 +58,7 @@ query FindStudio($id: ID!) {
 
 FIND_GROUP = """
 query FindGroup($id: ID!) {
-  findGroup(id: $id) { id name rating100 o_counter favorite }
+  findGroup(id: $id) { id name rating100 o_counter }
 }
 """
 
@@ -84,7 +84,7 @@ query { findStudios(filter: {per_page: -1}) {
 
 FIND_ALL_GROUPS = """
 query { findGroups(filter: {per_page: -1}) {
-  groups { id name rating100 o_counter favorite }
+  groups { id name rating100 o_counter }
 } }
 """
 
@@ -159,7 +159,7 @@ query FindGroup($id: ID!) {
 FIND_GROUP_PARENTS = """
 query FindGroup($id: ID!) {
   findGroup(id: $id) {
-    containing_groups { group { id name rating100 o_counter favorite } }
+    containing_groups { group { id name rating100 o_counter } }
   }
 }
 """
