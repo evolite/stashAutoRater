@@ -111,11 +111,12 @@ if [[ -n "$EXISTING_ID" ]]; then
         "$CODEBERG_API/repos/$CODEBERG_OWNER/$CODEBERG_REPO/releases/$EXISTING_ID" > /dev/null
 fi
 
+HEAD_SHA=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 RELEASE_RESPONSE=$(curl -sL -X POST \
     -H "Authorization: token $CODEBERG_TOKEN" \
     -H "Content-Type: application/json" \
     "$CODEBERG_API/repos/$CODEBERG_OWNER/$CODEBERG_REPO/releases" \
-    -d "{\"tag_name\":\"v$VERSION\",\"name\":\"v$VERSION\",\"body\":\"Release v$VERSION\",\"target_commitish\":\"main\",\"draft\":false,\"prerelease\":false}")
+    -d "{\"tag_name\":\"v$VERSION\",\"name\":\"v$VERSION\",\"body\":\"Release v$VERSION\",\"target_commitish\":\"$HEAD_SHA\",\"draft\":false,\"prerelease\":false}")
 RELEASE_ID=$(echo "$RELEASE_RESPONSE" | python3 -c "import sys,json; r=json.load(sys.stdin); print(r.get('id',''))" 2>/dev/null || echo "")
 
 if [[ -z "$RELEASE_ID" ]]; then
