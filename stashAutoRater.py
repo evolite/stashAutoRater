@@ -405,7 +405,7 @@ def rate_all_galleries(global_mean):
         try:
             rate_gallery(g, global_mean)
         except Exception as e:
-            log.error(f"ERROR rating gallery {g.get('name', g['id'])}: {e}")
+            log.error(f"ERROR rating gallery {g.get('title') or g['id']}: {e}")
 
 
 # --- Hook helpers ---
