@@ -20,6 +20,8 @@ RATE_GALLERIES  = True
 
 MAX_GROUP_DEPTH = 4  # levels of sub_groups to include when rating a group
 
+MSG_DONE = "Done."
+
 # --- Hook context ---
 
 FIND_SCENE_CONTEXT = """
@@ -410,50 +412,59 @@ def rate_all_galleries(global_mean):
 
 # --- Hook helpers ---
 
+def _rate_performers_list(performers, global_mean):
+    for p in performers:
+        try:
+            rate_performer(p, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating performer {p.get('name', p['id'])}: {e}")
+
+
+def _rate_studio(studio, global_mean):
+    try:
+        rate_studio(studio, global_mean)
+    except Exception as e:
+        log.error(f"ERROR rating studio {studio.get('name', studio['id'])}: {e}")
+
+
+def _rate_groups_list(groups, global_mean):
+    for assoc in groups:
+        g = assoc.get("group") if isinstance(assoc, dict) and "group" in assoc else assoc
+        if not g:
+            continue
+        try:
+            rate_group(g, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating group {g.get('name', g['id'])}: {e}")
+        rate_group_ancestors(g["id"], global_mean)
+
+
+def _rate_galleries_list(galleries, global_mean):
+    for gal in galleries:
+        try:
+            rate_gallery(gal, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating gallery {gal.get('title') or gal['id']}: {e}")
+
+
 def rate_entities_from_scene(scene_id, global_mean):
     result = graphql(FIND_SCENE_CONTEXT, {"id": scene_id}).get("findScene") or {}
     if RATE_PERFORMERS:
-        for p in result.get("performers", []):
-            try:
-                rate_performer(p, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating performer {p.get('name', p['id'])}: {e}")
+        _rate_performers_list(result.get("performers", []), global_mean)
     if RATE_STUDIOS and result.get("studio"):
-        try:
-            rate_studio(result["studio"], global_mean)
-        except Exception as e:
-            log.error(f"ERROR rating studio {result['studio'].get('name', result['studio']['id'])}: {e}")
+        _rate_studio(result["studio"], global_mean)
     if RATE_GROUPS:
-        for assoc in result.get("groups", []):
-            g = assoc.get("group") if isinstance(assoc, dict) and "group" in assoc else assoc
-            if not g:
-                continue
-            try:
-                rate_group(g, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating group {g.get('name', g['id'])}: {e}")
-            rate_group_ancestors(g["id"], global_mean)
+        _rate_groups_list(result.get("groups", []), global_mean)
 
 
 def rate_entities_from_image(image_id, global_mean):
     result = graphql(FIND_IMAGE_CONTEXT, {"id": image_id}).get("findImage") or {}
     if RATE_PERFORMERS:
-        for p in result.get("performers", []):
-            try:
-                rate_performer(p, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating performer {p.get('name', p['id'])}: {e}")
+        _rate_performers_list(result.get("performers", []), global_mean)
     if RATE_STUDIOS and result.get("studio"):
-        try:
-            rate_studio(result["studio"], global_mean)
-        except Exception as e:
-            log.error(f"ERROR rating studio {result['studio'].get('name', result['studio']['id'])}: {e}")
+        _rate_studio(result["studio"], global_mean)
     if RATE_GALLERIES:
-        for gal in result.get("galleries", []):
-            try:
-                rate_gallery(gal, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating gallery {gal.get('title') or gal['id']}: {e}")
+        _rate_galleries_list(result.get("galleries", []), global_mean)
 
 
 def parse_boost(raw, name, current):
@@ -472,6 +483,101 @@ def parse_bool(raw, current):
     if isinstance(raw, bool):
         return raw
     return str(raw).lower() not in ("false", "0", "no", "")
+
+
+def _handle_performer_hook(entity_id, global_mean):
+    if not RATE_PERFORMERS:
+        return
+    result = graphql(FIND_PERFORMER, {"id": entity_id}).get("findPerformer")
+    if result:
+        try:
+            rate_performer(result, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating performer {result.get('name', entity_id)}: {e}")
+
+
+def _handle_studio_hook(entity_id, global_mean):
+    if not RATE_STUDIOS:
+        return
+    result = graphql(FIND_STUDIO, {"id": entity_id}).get("findStudio")
+    if result:
+        try:
+            rate_studio(result, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating studio {result.get('name', entity_id)}: {e}")
+
+
+def _handle_group_hook(entity_id, global_mean):
+    if not RATE_GROUPS:
+        return
+    result = graphql(FIND_GROUP, {"id": entity_id}).get("findGroup")
+    if result:
+        try:
+            rate_group(result, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating group {result.get('name', entity_id)}: {e}")
+        rate_group_ancestors(entity_id, global_mean)
+
+
+def _handle_gallery_hook(entity_id, global_mean):
+    if not RATE_GALLERIES:
+        return
+    result = graphql(FIND_GALLERY, {"id": entity_id}).get("findGallery")
+    if result:
+        try:
+            rate_gallery(result, global_mean)
+        except Exception as e:
+            log.error(f"ERROR rating gallery {result.get('title') or entity_id}: {e}")
+
+
+def _handle_hook(hook_ctx, global_mean):
+    entity_id = hook_ctx.get("id")
+    if not entity_id:
+        log.error("No entity id in hook payload")
+        sys.exit(1)
+    hook_type = hook_ctx.get("type", "")
+    if hook_type.startswith("Performer"):
+        _handle_performer_hook(entity_id, global_mean)
+    elif hook_type.startswith("Studio"):
+        _handle_studio_hook(entity_id, global_mean)
+    elif hook_type.startswith("Group"):
+        _handle_group_hook(entity_id, global_mean)
+    elif hook_type.startswith("Gallery"):
+        _handle_gallery_hook(entity_id, global_mean)
+    elif "Scene" in hook_type:
+        rate_entities_from_scene(entity_id, global_mean)
+    elif "Image" in hook_type:
+        rate_entities_from_image(entity_id, global_mean)
+    else:
+        rate_entities_from_scene(entity_id, global_mean)
+        rate_entities_from_image(entity_id, global_mean)
+
+
+def _handle_mode(mode, global_mean):
+    if mode == "rateAll":
+        if RATE_PERFORMERS: rate_all_performers(global_mean)
+        if RATE_STUDIOS:    rate_all_studios(global_mean)
+        if RATE_GROUPS:     rate_all_groups(global_mean)
+        if RATE_GALLERIES:  rate_all_galleries(global_mean)
+        log.info(MSG_DONE)
+        return True
+    if mode == "rateAllPerformers":
+        rate_all_performers(global_mean)
+        log.info(MSG_DONE)
+        return True
+    if mode == "rateAllStudios":
+        rate_all_studios(global_mean)
+        log.info(MSG_DONE)
+        return True
+    if mode == "rateAllGroups":
+        rate_all_groups(global_mean)
+        log.info(MSG_DONE)
+        return True
+    if mode == "rateAllGalleries":
+        rate_all_galleries(global_mean)
+        log.info(MSG_DONE)
+        return True
+    return False
 
 
 def main():
@@ -505,88 +611,10 @@ def main():
     global_mean = get_global_mean()
     mode = payload.get("args", {}).get("mode")
 
-    if mode == "rateAll":
-        if RATE_PERFORMERS: rate_all_performers(global_mean)
-        if RATE_STUDIOS:    rate_all_studios(global_mean)
-        if RATE_GROUPS:     rate_all_groups(global_mean)
-        if RATE_GALLERIES:  rate_all_galleries(global_mean)
-        log.info("Done.")
+    if _handle_mode(mode, global_mean):
         return
 
-    if mode == "rateAllPerformers":
-        rate_all_performers(global_mean)
-        log.info("Done.")
-        return
-
-    if mode == "rateAllStudios":
-        rate_all_studios(global_mean)
-        log.info("Done.")
-        return
-
-    if mode == "rateAllGroups":
-        rate_all_groups(global_mean)
-        log.info("Done.")
-        return
-
-    if mode == "rateAllGalleries":
-        rate_all_galleries(global_mean)
-        log.info("Done.")
-        return
-
-    # Hook mode
-    hook_ctx = payload.get("args", {}).get("hookContext", {})
-    entity_id = hook_ctx.get("id")
-    if not entity_id:
-        log.error("No entity id in hook payload")
-        sys.exit(1)
-
-    hook_type = hook_ctx.get("type", "")
-
-    if hook_type.startswith("Performer"):
-        if not RATE_PERFORMERS:
-            return
-        result = graphql(FIND_PERFORMER, {"id": entity_id}).get("findPerformer")
-        if result:
-            try:
-                rate_performer(result, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating performer {result.get('name', entity_id)}: {e}")
-
-    elif hook_type.startswith("Studio"):
-        if not RATE_STUDIOS:
-            return
-        result = graphql(FIND_STUDIO, {"id": entity_id}).get("findStudio")
-        if result:
-            try:
-                rate_studio(result, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating studio {result.get('name', entity_id)}: {e}")
-
-    elif hook_type.startswith("Group"):
-        if not RATE_GROUPS:
-            return
-        result = graphql(FIND_GROUP, {"id": entity_id}).get("findGroup")
-        if result:
-            try:
-                rate_group(result, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating group {result.get('name', entity_id)}: {e}")
-            rate_group_ancestors(entity_id, global_mean)
-
-    elif hook_type.startswith("Gallery"):
-        if not RATE_GALLERIES:
-            return
-        result = graphql(FIND_GALLERY, {"id": entity_id}).get("findGallery")
-        if result:
-            try:
-                rate_gallery(result, global_mean)
-            except Exception as e:
-                log.error(f"ERROR rating gallery {result.get('title') or entity_id}: {e}")
-
-    else:
-        # Scene or Image update — cascade to all associated entities
-        rate_entities_from_scene(entity_id, global_mean)
-        rate_entities_from_image(entity_id, global_mean)
+    _handle_hook(payload.get("args", {}).get("hookContext", {}), global_mean)
 
 
 if __name__ == "__main__":
