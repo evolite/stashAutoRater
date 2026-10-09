@@ -281,7 +281,7 @@ def rate_all_performers(global_mean):
     for p in performers:
         try:
             rate_performer(p, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating performer {p.get('name', p['id'])}: {e}")
 
 
@@ -313,7 +313,7 @@ def rate_all_studios(global_mean):
     for s in studios:
         try:
             rate_studio(s, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating studio {s.get('name', s['id'])}: {e}")
 
 
@@ -348,7 +348,7 @@ def rate_group_ancestors(group_id, global_mean, depth=0, seen=None):
             continue
         try:
             rate_group(parent, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating group {parent.get('name', parent['id'])}: {e}")
         rate_group_ancestors(parent["id"], global_mean, depth + 1, seen)
 
@@ -377,7 +377,7 @@ def rate_all_groups(global_mean):
     for g in groups:
         try:
             rate_group(g, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating group {g.get('name', g['id'])}: {e}")
 
 
@@ -406,7 +406,7 @@ def rate_all_galleries(global_mean):
     for g in galleries:
         try:
             rate_gallery(g, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating gallery {g.get('title') or g['id']}: {e}")
 
 
@@ -416,14 +416,14 @@ def _rate_performers_list(performers, global_mean):
     for p in performers:
         try:
             rate_performer(p, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating performer {p.get('name', p['id'])}: {e}")
 
 
 def _rate_studio(studio, global_mean):
     try:
         rate_studio(studio, global_mean)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
         log.error(f"ERROR rating studio {studio.get('name', studio['id'])}: {e}")
 
 
@@ -434,7 +434,7 @@ def _rate_groups_list(groups, global_mean):
             continue
         try:
             rate_group(g, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating group {g.get('name', g['id'])}: {e}")
         rate_group_ancestors(g["id"], global_mean)
 
@@ -443,7 +443,7 @@ def _rate_galleries_list(galleries, global_mean):
     for gal in galleries:
         try:
             rate_gallery(gal, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating gallery {gal.get('title') or gal['id']}: {e}")
 
 
@@ -492,7 +492,7 @@ def _handle_performer_hook(entity_id, global_mean):
     if result:
         try:
             rate_performer(result, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating performer {result.get('name', entity_id)}: {e}")
 
 
@@ -503,7 +503,7 @@ def _handle_studio_hook(entity_id, global_mean):
     if result:
         try:
             rate_studio(result, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating studio {result.get('name', entity_id)}: {e}")
 
 
@@ -514,7 +514,7 @@ def _handle_group_hook(entity_id, global_mean):
     if result:
         try:
             rate_group(result, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating group {result.get('name', entity_id)}: {e}")
         rate_group_ancestors(entity_id, global_mean)
 
@@ -526,7 +526,7 @@ def _handle_gallery_hook(entity_id, global_mean):
     if result:
         try:
             rate_gallery(result, global_mean)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad entity must not abort the batch
             log.error(f"ERROR rating gallery {result.get('title') or entity_id}: {e}")
 
 
