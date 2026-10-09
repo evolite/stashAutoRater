@@ -3,8 +3,8 @@ import math
 import statistics
 import sys
 
-from stashapi.stashapp import StashInterface
 from stashapi import log
+from stashapi.stashapp import StashInterface
 
 CONFIDENCE = 10
 O_BOOST = 0        # additive boost per log(1 + o_count); configurable in Stash plugin settings
