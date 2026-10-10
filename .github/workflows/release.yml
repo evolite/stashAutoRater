@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Parse version
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Bump version in yml
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.ver.outputs.version }}/" stashAutoRater.yml
+
+      - name: Commit version bump
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add stashAutoRater.yml
+          git diff --staged --quiet || git commit -m "Bump version to ${{ steps.ver.outputs.version }}"
+          git push origin HEAD:main
+
+      - name: Create zip
+        run: python3 -c "import zipfile; z=zipfile.ZipFile('stashAutoRater.zip','w',zipfile.ZIP_DEFLATED); z.write('stashAutoRater.yml'); z.write('stashAutoRater.py'); z.close()"
+
+      - name: Compute sha256
+        id: sha
+        run: echo "hash=$(sha256sum stashAutoRater.zip | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NOTES="Release $GITHUB_REF_NAME"
+          gh release delete "$GITHUB_REF_NAME" --yes 2>/dev/null || true
+          gh release create "$GITHUB_REF_NAME" stashAutoRater.zip --title "$GITHUB_REF_NAME" --notes "$NOTES"
+
+      - name: Update pages index
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          HASH: ${{ steps.sha.outputs.hash }}
+          TAG: ${{ github.ref_name }}
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git clone "https://surging9143:${CODEBERG_TOKEN}@codeberg.org/surging9143/pages.git" /tmp/pages
+          export DATE=$(date +"%Y-%m-%d %H:%M:%S")
+          export URL="https://github.com/evolite/stashAutoRater/releases/download/${TAG}/stashAutoRater.zip"
+          python3 .github/update_pages.py
+          cd /tmp/pages
+          git add index.yml
+          git diff --staged --quiet || git commit -m "Update stashAutoRater to v${VERSION}"
+          git push
